@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AltNemesis</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg:       #080c14;
+    --surface:  #0d1220;
+    --card:     #101827;
+    --card2:    #141e2e;
+    --border:   #1c2a3a;
+    --border2:  #243447;
+    --accent:   #f59e0b;
+    --accent2:  #fbbf24;
+    --green:    #10d9a0;
+    --red:      #f43f5e;
+    --yellow:   #fbbf24;
+    --blue:     #38bdf8;
+    --text:     #e8edf5;
+    --text2:    #94a3b8;
+    --muted:    #4a5d72;
+    --mono:     'IBM Plex Mono', monospace;
+    --sans:     'Outfit', sans-serif;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-weight: 400;
+    min-height: 100vh;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    top: -20%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 900px;
+    height: 600px;
+    background: radial-gradient(ellipse, rgba(245,158,11,0.04) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .content { position: relative; z-index: 1; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+  }
+  .label {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    display: block;
+  }
+  .section-title {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+  }
+  .search-input {
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 10px;
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 15px;
+    padding: 13px 16px;
+    width: 100%;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .search-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(245,158,11,0.08); }
+  .search-input::placeholder { color: var(--muted); }
+  .num-input {
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 10px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 22px;
+    font-weight: 600;
+    padding: 14px 16px;
+    width: 100%;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    text-align: center;
+  }
+  .num-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(245,158,11,0.08); }
+  .num-input::placeholder { color: var(--muted); font-size: 15px; }
+  .dropdown {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0; right: 0;
+    background: var(--card2);
+    border: 1px solid var(--border2);
+    border-radius: 10px;
+    z-index: 100;
+    max-height: 240px;
+    overflow-y: auto;
+    box-shadow: 0 16px 48px rgba(0,0,0,0.7);
+  }
+  .dropdown-item {
+    padding: 11px 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: background 0.12s;
+    font-size: 14px;
+  }
+  .dropdown-item:hover { background: rgba(245,158,11,0.06); }
+  .dropdown-item .sym {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--accent);
+    text-transform: uppercase;
+    background: rgba(245,158,11,0.1);
+    padding: 2px 7px;
+    border-radius: 4px;
+  }
+  .btn-predict {
+    background: var(--accent);
+    color: #0a0c10;
+    font-family: var(--mono);
+    font-weight: 600;
+    font-size: 13px;
+    letter-spacing: 0.08em;
+    padding: 15px 32px;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+    width: 100%;
+    transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
+    text-transform: uppercase;
+  }
+  .btn-predict:hover:not(:disabled) { background: var(--accent2); transform: translateY(-1px); box-shadow: 0 6px 24px rgba(245,158,11,0.3); }
+  .btn-predict:disabled { background: var(--border2); color: var(--muted); cursor: not-allowed; }
+  .quick-btn {
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 7px;
+    color: var(--text2);
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 500;
+    padding: 7px 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+    min-width: 44px;
+    flex: 1;
+  }
+  .quick-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(245,158,11,0.05); }
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .badge-high    { background: rgba(16,217,160,0.12); color: var(--green); border: 1px solid rgba(16,217,160,0.25); }
+  .badge-medium  { background: rgba(251,191,36,0.12); color: var(--yellow); border: 1px solid rgba(251,191,36,0.25); }
+  .badge-low     { background: rgba(244,63,94,0.12); color: var(--red); border: 1px solid rgba(244,63,94,0.25); }
+  .badge-blocked { background: rgba(244,63,94,0.15); color: var(--red); border: 1px solid rgba(244,63,94,0.3); }
+  .big-number {
+    font-family: var(--mono);
+    font-size: clamp(42px, 6vw, 68px);
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: -0.03em;
+  }
+  .signal-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .signal-row:last-child { border-bottom: none; }
+  .signal-value { font-family: var(--mono); font-weight: 500; font-size: 12px; }
+  .window-pill {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 10px;
+    padding: 12px;
+    flex: 1;
+    font-family: var(--mono);
+  }
+  .window-pill.agree   { border-color: rgba(16,217,160,0.3); background: rgba(16,217,160,0.04); }
+  .window-pill.disagree { border-color: rgba(244,63,94,0.3); background: rgba(244,63,94,0.04); }
+  .range-bar {
+    height: 5px;
+    border-radius: 999px;
+    background: var(--border2);
+    position: relative;
+    overflow: visible;
+  }
+  .range-fill {
+    position: absolute; height: 100%; border-radius: 999px;
+    background: linear-gradient(90deg, rgba(16,217,160,0.4), var(--green));
+  }
+  .range-fill.neg { background: linear-gradient(90deg, var(--red), rgba(244,63,94,0.4)); }
+  .range-marker {
+    position: absolute; width: 2px; height: 13px; top: -4px;
+    background: white; border-radius: 1px; transform: translateX(-50%);
+    box-shadow: 0 0 6px rgba(255,255,255,0.5);
+  }
+  .regime-chip {
+    display: inline-flex; align-items: center;
+    padding: 3px 10px; border-radius: 6px;
+    font-size: 10px; font-family: var(--mono); font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.08em;
+  }
+  .regime-BULL     { background: rgba(16,217,160,0.1); color: var(--green); }
+  .regime-BEAR     { background: rgba(244,63,94,0.1); color: var(--red); }
+  .regime-SIDEWAYS { background: rgba(251,191,36,0.1); color: var(--yellow); }
+  .regime-SHOCK    { background: rgba(244,63,94,0.18); color: var(--red); }
+  .warning {
+    background: rgba(251,191,36,0.06);
+    border: 1px solid rgba(251,191,36,0.2);
+    border-radius: 8px; padding: 10px 14px;
+    font-size: 13px; color: #d4a017;
+    display: flex; gap: 8px; align-items: flex-start; line-height: 1.5;
+  }
+  .ticker-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--green); box-shadow: 0 0 8px var(--green);
+    animation: pulse 2.5s infinite;
+  }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+  .slide-up { animation: fadeUp 0.35s ease forwards; }
+  .loading-spin {
+    width: 28px; height: 28px;
+    border: 2px solid var(--border2); border-top-color: var(--accent);
+    border-radius: 50%; animation: spin 0.8s linear infinite;
+    margin: 0 auto 16px;
+  }
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+</style>
+</head>
+<body>
+<div class="content">
+
+<header style="border-bottom:1px solid var(--border); padding:0 24px; height:56px; display:flex; align-items:center;">
+  <div style="max-width:1200px; width:100%; margin:0 auto; display:flex; align-items:center; justify-content:space-between;">
+    <div style="display:flex; align-items:center; gap:14px;">
+      <div class="ticker-dot"></div>
+      <span style="font-family:var(--mono); font-size:13px; font-weight:600; color:var(--accent); letter-spacing:0.08em;">AltNemesis</span>
+      <span style="color:var(--border2); font-size:18px;">·</span>
+      <span style="font-size:12px; color:var(--muted);">Adaptive Crypto Prediction Engine</span>
+    </div>
+    <div style="font-family:var(--mono); font-size:10px; color:var(--muted); letter-spacing:0.06em;">7 LIVE SIGNALS</div>
+  </div>
+</header>
+
+<main style="max-width:1200px; margin:0 auto; padding:36px 24px;">
+  <div style="display:grid; grid-template-columns:360px 1fr; gap:20px; align-items:start;">
+
+    <!-- Left Panel -->
+    <div style="display:flex; flex-direction:column; gap:16px;">
+      <div>
+        <h1 style="font-size:26px; font-weight:700; letter-spacing:-0.02em; margin-bottom:8px;">Altcoin Move Predictor</h1>
+        <p style="font-size:13px; color:var(--text2); line-height:1.65;">Enter a projected BTC move and select a coin. The adaptive engine calculates the expected altcoin move using 7 live market signals.</p>
+      </div>
+
+      <div class="card" style="padding:18px;">
+        <span class="label" style="margin-bottom:10px;">Select Altcoin</span>
+        <div style="position:relative;" id="searchContainer">
+          <input type="text" class="search-input" id="coinSearch" placeholder="Search by name or symbol…" autocomplete="off"/>
+          <div class="dropdown" id="dropdown" style="display:none;"></div>
+        </div>
+        <div id="selectedCoin" style="display:none; margin-top:12px;">
+          <div style="display:flex; align-items:center; gap:10px; padding:10px 14px; background:rgba(245,158,11,0.06); border:1px solid rgba(245,158,11,0.2); border-radius:9px;">
+            <img id="selectedThumb" src="" style="width:26px;height:26px;border-radius:50%;" onerror="this.style.display='none'"/>
+            <div>
+              <div id="selectedName" style="font-size:14px; font-weight:500;"></div>
+              <div id="selectedId" style="font-family:var(--mono); font-size:10px; color:var(--muted); margin-top:1px;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="padding:18px;">
+        <span class="label" style="margin-bottom:10px;">Expected BTC Move (%)</span>
+        <input type="number" class="num-input" id="btcMoveInput" placeholder="e.g. +3.0 or −5.0" step="0.1" min="-50" max="50"/>
+        <div style="display:flex; gap:6px; margin-top:10px;">
+          <button class="quick-btn" data-val="-5">−5%</button>
+          <button class="quick-btn" data-val="-3">−3%</button>
+          <button class="quick-btn" data-val="-1">−1%</button>
+          <button class="quick-btn" data-val="1">+1%</button>
+          <button class="quick-btn" data-val="3">+3%</button>
+          <button class="quick-btn" data-val="5">+5%</button>
+        </div>
+      </div>
+
+      <button class="btn-predict" id="predictBtn" disabled>▶&nbsp;&nbsp;Run Prediction</button>
+
+      <div style="padding:14px 16px; background:rgba(56,189,248,0.05); border:1px solid rgba(56,189,248,0.12); border-radius:10px;">
+        <div style="font-family:var(--mono); font-size:10px; color:var(--blue); letter-spacing:0.08em; margin-bottom:8px;">7 ENGINE MODULES</div>
+        <div style="font-size:12px; color:var(--text2); line-height:1.8;">Regime Detection · Asymmetric Beta · EWMA Consensus · BTC Dominance · Correlation Gate · Volatility Scaling · Momentum State</div>
+      </div>
+    </div>
+
+    <!-- Right Panel -->
+    <div id="outputPanel">
+
+      <div id="emptyState" class="card" style="padding:80px 40px; text-align:center;">
+        <div style="width:48px; height:48px; border-radius:12px; background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.2); display:flex; align-items:center; justify-content:center; margin:0 auto 20px; font-size:22px;">⚡</div>
+        <p style="font-family:var(--mono); font-size:11px; color:var(--muted); letter-spacing:0.1em;">SELECT A COIN AND ENTER A BTC MOVE</p>
+        <p style="font-size:13px; color:var(--muted); margin-top:8px;">to generate a prediction</p>
+      </div>
+
+      <div id="loadingState" style="display:none;" class="card">
+        <div style="padding:80px 40px; text-align:center;">
+          <div class="loading-spin"></div>
+          <div style="font-family:var(--mono); font-size:11px; color:var(--accent); letter-spacing:0.1em; margin-bottom:8px;">COMPUTING SIGNALS</div>
+          <div style="font-size:12px; color:var(--muted);">Fetching data · Running 7 modules · Assembling prediction</div>
+        </div>
+      </div>
+
+      <div id="errorState" style="display:none;" class="card">
+        <div style="padding:60px 40px; text-align:center;">
+          <div style="font-size:28px; margin-bottom:14px; opacity:0.7;">⚠</div>
+          <p id="errorMsg" style="font-family:var(--mono); font-size:13px; color:var(--red);"></p>
+        </div>
+      </div>
+
+      <div id="results" style="display:none;" class="slide-up">
+
+        <div class="card" style="padding:28px; margin-bottom:16px;">
+          <div style="display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:24px;">
+            <div>
+              <span class="label" style="margin-bottom:12px;">Predicted Altcoin Move</span>
+              <div class="big-number" id="predNumber">—</div>
+              <div id="predRange" style="font-family:var(--mono); font-size:12px; color:var(--muted); margin-top:8px;"></div>
+            </div>
+            <div style="display:flex; flex-direction:column; align-items:flex-end; gap:8px;">
+              <div id="confidenceBadge" class="badge badge-low">○ LOW</div>
+              <div id="regimeChip" class="regime-chip regime-SIDEWAYS">Sideways</div>
+            </div>
+          </div>
+          <div style="margin-bottom:20px;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+              <span id="rangeLowLabel" style="font-family:var(--mono); font-size:11px; color:var(--muted);">—</span>
+              <span class="label">Predicted Range</span>
+              <span id="rangeHighLabel" style="font-family:var(--mono); font-size:11px; color:var(--muted);">—</span>
+            </div>
+            <div class="range-bar">
+              <div class="range-fill" id="rangeFill" style="left:0;width:100%;"></div>
+              <div class="range-marker" id="rangeMarker" style="left:50%;"></div>
+            </div>
+          </div>
+          <div id="warningsContainer" style="display:flex; flex-direction:column; gap:8px;"></div>
+          <p id="regimeDesc" style="font-size:12px; color:var(--text2); margin-top:14px; line-height:1.65;"></p>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;">
+          <div class="card" style="padding:20px;">
+            <div class="section-title" style="margin-bottom:14px;">Beta Signals</div>
+            <div class="signal-row"><span class="label">Beta (selected)</span><span class="signal-value" id="betaSelected">—</span></div>
+            <div class="signal-row"><span class="label">Beta Up</span><span class="signal-value" style="color:var(--green);" id="betaUp">—</span></div>
+            <div class="signal-row"><span class="label">Beta Down</span><span class="signal-value" style="color:var(--red);" id="betaDown">—</span></div>
+            <div class="signal-row"><span class="label">Agreement</span><span class="signal-value" id="betaAgreement">—</span></div>
+            <div class="signal-row"><span class="label">R² (30d)</span><span class="signal-value" id="r2Value">—</span></div>
+            <div class="signal-row"><span class="label">Pearson R</span><span class="signal-value" id="pearsonR">—</span></div>
+          </div>
+          <div class="card" style="padding:20px;">
+            <div class="section-title" style="margin-bottom:14px;">Market Signals</div>
+            <div class="signal-row"><span class="label">Dominance</span><span class="signal-value" id="domSignal">—</span></div>
+            <div class="signal-row"><span class="label">Dom Multiplier</span><span class="signal-value" id="domMult">—</span></div>
+            <div class="signal-row"><span class="label">Vol Regime</span><span class="signal-value" id="volRegime">—</span></div>
+            <div class="signal-row"><span class="label">Vol 14d Ann.</span><span class="signal-value" id="vol14d">—</span></div>
+            <div class="signal-row"><span class="label">Momentum</span><span class="signal-value" id="momentumState">—</span></div>
+            <div class="signal-row"><span class="label">Lag Detected</span><span class="signal-value" id="lagInfo">—</span></div>
+          </div>
+        </div>
+
+        <div class="card" style="padding:20px; margin-bottom:16px;">
+          <div class="section-title" style="margin-bottom:14px;">Multi-Window Beta Consensus</div>
+          <div id="windowPills" style="display:flex; gap:10px;"></div>
+        </div>
+
+        <div class="card" style="padding:20px;">
+          <div class="section-title" style="margin-bottom:4px;">BTC vs Altcoin Returns — 90 Days</div>
+          <div style="font-size:12px; color:var(--text2); margin-bottom:18px;">Each point = one trading day. Line = regression (selected beta).</div>
+          <div style="position:relative; height:280px;"><canvas id="scatterChart"></canvas></div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</main>
+</div>
+
+<script>
+let selectedCoinId = null, searchTimeout = null, scatterChart = null;
+const coinSearch = document.getElementById('coinSearch');
+const dropdown = document.getElementById('dropdown');
+const selectedCoinEl = document.getElementById('selectedCoin');
+const selectedName = document.getElementById('selectedName');
+const selectedId = document.getElementById('selectedId');
+const selectedThumb = document.getElementById('selectedThumb');
+const btcInput = document.getElementById('btcMoveInput');
+const predictBtn = document.getElementById('predictBtn');
+
+coinSearch.addEventListener('input', () => {
+  clearTimeout(searchTimeout);
+  const q = coinSearch.value.trim();
+  if (q.length < 2) { dropdown.style.display = 'none'; return; }
+  searchTimeout = setTimeout(() => fetchCoins(q), 300);
+});
+
+async function fetchCoins(q) {
+  try {
+    const res = await fetch(`/coins?q=${encodeURIComponent(q)}`);
+    const data = await res.json();
+    renderDropdown(data.results || []);
+  } catch(e) { dropdown.style.display = 'none'; }
+}
+
+function renderDropdown(coins) {
+  if (!coins.length) { dropdown.style.display = 'none'; return; }
+  dropdown.innerHTML = coins.map(c => `
+    <div class="dropdown-item" data-id="${c.id}" data-name="${c.name}" data-sym="${c.symbol}" data-thumb="${c.thumb || ''}">
+      ${c.thumb ? `<img src="${c.thumb}" style="width:20px;height:20px;border-radius:50%;flex-shrink:0;" onerror="this.style.display='none'"/>` : ''}
+      <span>${c.name}</span><span class="sym">${c.symbol}</span>
+    </div>`).join('');
+  dropdown.style.display = 'block';
+  dropdown.querySelectorAll('.dropdown-item').forEach(el => el.addEventListener('click', () => selectCoin(el)));
+}
+
+function selectCoin(el) {
+  selectedCoinId = el.dataset.id;
+  coinSearch.value = el.dataset.name;
+  dropdown.style.display = 'none';
+  selectedCoinEl.style.display = 'block';
+  selectedName.textContent = el.dataset.name;
+  selectedId.textContent = el.dataset.id;
+  selectedThumb.src = el.dataset.thumb || '';
+  checkReady();
+}
+
+document.addEventListener('click', e => {
+  if (!document.getElementById('searchContainer').contains(e.target)) dropdown.style.display = 'none';
+});
+
+document.querySelectorAll('.quick-btn').forEach(btn => {
+  btn.addEventListener('click', () => { btcInput.value = btn.dataset.val; checkReady(); });
+});
+btcInput.addEventListener('input', checkReady);
+
+function checkReady() {
+  const val = parseFloat(btcInput.value);
+  predictBtn.disabled = !(selectedCoinId && !isNaN(val) && val !== 0);
+}
+
+predictBtn.addEventListener('click', runPrediction);
+
+async function runPrediction() {
+  const btc = parseFloat(btcInput.value);
+  if (!selectedCoinId || isNaN(btc)) return;
+  showState('loading');
+  predictBtn.disabled = true;
+  try {
+    const res = await fetch(`/predict?coin=${selectedCoinId}&btc_move=${btc}`);
+    const data = await res.json();
+    if (!data.success && data.confidence !== 'BLOCKED') { showError(data.error || 'Prediction failed'); return; }
+    renderResults(data);
+    showState('results');
+  } catch(e) {
+    showError('Network error — check your connection');
+  } finally {
+    predictBtn.disabled = false;
+  }
+}
+
+function renderResults(d) {
+  const isUp = d.predicted_move >= 0;
+  const moveColor = isUp ? 'var(--green)' : 'var(--red)';
+  const moveSign = isUp ? '+' : '';
+
+  const predNum = document.getElementById('predNumber');
+  if (d.confidence === 'BLOCKED') { predNum.textContent = 'BLOCKED'; predNum.style.color = 'var(--red)'; }
+  else { predNum.textContent = `${moveSign}${d.predicted_move?.toFixed(2)}%`; predNum.style.color = moveColor; }
+
+  const rl = d.range_low, rh = d.range_high;
+  document.getElementById('predRange').textContent = d.confidence !== 'BLOCKED' && rl != null
+    ? `Range: ${rl >= 0 ? '+' : ''}${rl?.toFixed(2)}% to ${rh >= 0 ? '+' : ''}${rh?.toFixed(2)}%` : '';
+  document.getElementById('rangeLowLabel').textContent  = rl != null ? `${rl >= 0 ? '+' : ''}${rl?.toFixed(1)}%` : '';
+  document.getElementById('rangeHighLabel').textContent = rh != null ? `${rh >= 0 ? '+' : ''}${rh?.toFixed(1)}%` : '';
+
+  if (rl != null && rh != null && d.predicted_move != null) {
+    const extent = Math.max(Math.abs(rl), Math.abs(rh), 0.1) * 1.2;
+    const toPos = v => ((v + extent) / (2 * extent) * 100);
+    document.getElementById('rangeFill').style.left  = toPos(Math.min(rl, rh)) + '%';
+    document.getElementById('rangeFill').style.width = (toPos(Math.max(rl, rh)) - toPos(Math.min(rl, rh))) + '%';
+    document.getElementById('rangeFill').className   = 'range-fill' + (isUp ? '' : ' neg');
+    document.getElementById('rangeMarker').style.left = toPos(d.predicted_move) + '%';
+  }
+
+  const badge = document.getElementById('confidenceBadge');
+  const conf = (d.confidence || 'LOW').toUpperCase();
+  const confIcons = { HIGH: '●', MEDIUM: '◐', LOW: '○', BLOCKED: '✕' };
+  badge.textContent = `${confIcons[conf] || '○'} ${conf}`;
+  badge.className = `badge badge-${conf.toLowerCase()}`;
+
+  const chip = document.getElementById('regimeChip');
+  chip.textContent = d.regime || '—';
+  chip.className = `regime-chip regime-${d.regime_code || 'SIDEWAYS'}`;
+
+  document.getElementById('regimeDesc').textContent = d.regime_description || '';
+
+  const wc = document.getElementById('warningsContainer');
+  wc.innerHTML = '';
+  const msgs = [...(d.warnings || []), d.confidence === 'BLOCKED' ? (d.error || 'Prediction blocked') : null].filter(Boolean);
+  msgs.forEach(w => {
+    const div = document.createElement('div');
+    div.className = 'warning';
+    div.innerHTML = `<span style="flex-shrink:0;">⚠</span><span>${w}</span>`;
+    wc.appendChild(div);
+  });
+
+  const fmt = v => v != null ? v.toFixed(4) : '—';
+  document.getElementById('betaSelected').textContent  = fmt(d.beta_selected);
+  document.getElementById('betaUp').textContent        = fmt(d.beta_up);
+  document.getElementById('betaDown').textContent      = fmt(d.beta_down);
+  document.getElementById('betaAgreement').textContent = d.beta_agreement || '—';
+  document.getElementById('r2Value').textContent       = d.r2 != null ? d.r2.toFixed(3) : '—';
+  document.getElementById('pearsonR').textContent      = d.pearson_r != null ? d.pearson_r.toFixed(3) : '—';
+  document.getElementById('domSignal').textContent     = d.dominance_direction || '—';
+  document.getElementById('domMult').textContent       = d.dominance_multiplier != null ? `×${d.dominance_multiplier.toFixed(3)}` : '—';
+  document.getElementById('volRegime').textContent     = d.vol_regime || '—';
+  document.getElementById('vol14d').textContent        = d.vol_14d_ann != null ? `${d.vol_14d_ann}%` : '—';
+  document.getElementById('momentumState').textContent = d.momentum_state || '—';
+  document.getElementById('lagInfo').textContent       = d.is_lagging ? `Yes (+${d.lag_days}d)` : 'No';
+
+  const pills = document.getElementById('windowPills');
+  pills.innerHTML = '';
+  const agreeSet = new Set(d.agreeing_windows || []);
+  (d.windows_detail || []).forEach(w => {
+    const isAgree = agreeSet.has(w.window);
+    const div = document.createElement('div');
+    div.className = `window-pill ${isAgree ? 'agree' : 'disagree'}`;
+    div.innerHTML = `
+      <div style="font-size:10px;color:var(--muted);margin-bottom:6px;font-weight:500;">${w.window}D</div>
+      <div style="font-size:15px;font-weight:600;color:${isAgree ? 'var(--green)' : 'var(--red)'};">${w.beta_all != null ? w.beta_all.toFixed(3) : '—'}</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:5px;">R² ${w.r2 != null ? w.r2.toFixed(2) : '—'}</div>
+      <div style="font-size:9px;margin-top:4px;font-weight:600;letter-spacing:0.06em;color:${isAgree ? 'var(--green)' : 'var(--red)'};">${isAgree ? '✓ AGREE' : '✕ DIFF'}</div>`;
+    pills.appendChild(div);
+  });
+
+  if (d.scatter && d.scatter.points) renderScatter(d.scatter, d.btc_move_input, d.predicted_move);
+}
+
+function renderScatter(scatter, btcMove, predicted) {
+  if (scatterChart) { scatterChart.destroy(); scatterChart = null; }
+  const ctx = document.getElementById('scatterChart').getContext('2d');
+  scatterChart = new Chart(ctx, {
+    type: 'scatter',
+    data: {
+      datasets: [
+        { label: 'Daily returns', data: scatter.points || [], backgroundColor: 'rgba(56,189,248,0.18)', borderColor: 'rgba(56,189,248,0.4)', pointRadius: 3.5, pointHoverRadius: 5 },
+        { label: 'Regression line', data: scatter.regression_line || [], type: 'line', borderColor: 'rgba(16,217,160,0.75)', borderWidth: 2, pointRadius: 0, fill: false, tension: 0 },
+        ...(btcMove != null && predicted != null ? [{ label: 'Your prediction', data: [{ x: btcMove, y: predicted }], backgroundColor: '#f59e0b', borderColor: '#f59e0b', pointRadius: 8, pointStyle: 'crossRot' }] : []),
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { backgroundColor: '#101827', borderColor: '#1c2a3a', borderWidth: 1, titleColor: '#4a5d72', bodyColor: '#e8edf5', padding: 10,
+          callbacks: { label: ctx => `BTC: ${ctx.parsed.x.toFixed(2)}%  Alt: ${ctx.parsed.y.toFixed(2)}%` } }
+      },
+      scales: {
+        x: { title: { display: true, text: 'BTC Daily Return (%)', color: '#4a5d72', font: { family: 'IBM Plex Mono', size: 10 } }, grid: { color: '#1c2a3a' }, ticks: { color: '#4a5d72', font: { family: 'IBM Plex Mono', size: 10 } } },
+        y: { title: { display: true, text: 'Alt Daily Return (%)', color: '#4a5d72', font: { family: 'IBM Plex Mono', size: 10 } }, grid: { color: '#1c2a3a' }, ticks: { color: '#4a5d72', font: { family: 'IBM Plex Mono', size: 10 } } }
+      }
+    }
+  });
+}
+
+function showState(state) {
+  document.getElementById('emptyState').style.display   = state === 'empty'   ? 'block' : 'none';
+  document.getElementById('loadingState').style.display = state === 'loading' ? 'block' : 'none';
+  document.getElementById('errorState').style.display   = state === 'error'   ? 'block' : 'none';
+  const res = document.getElementById('results');
+  res.style.display = state === 'results' ? 'block' : 'none';
+  if (state === 'results') res.classList.add('slide-up');
+}
+
+function showError(msg) { document.getElementById('errorMsg').textContent = msg; showState('error'); }
+showState('empty');
+</script>
+</body>
+</html>
